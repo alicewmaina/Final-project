@@ -1,11 +1,15 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, AuthState, LoginCredentials, SignUpData } from '../types/auth';
+import { useNavigate } from 'react-router-dom';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 interface AuthContextType extends AuthState {
   login: (credentials: LoginCredentials) => Promise<void>;
-  signup: (data: SignUpData) => Promise<void>;
+  signup: (data: { email: string; password: string; name: string; department: string; role: 'employee' | 'manager' }) => Promise<void>;
   logout: () => void;
   updateUser: (user: User) => void;
+  token: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -24,110 +28,88 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isLoading: true,
     isAuthenticated: false,
   });
+  const [token, setToken] = useState<string | null>(null);
 
-  // Simulate checking for existing session on app load
+  const navigate = useNavigate();
+
   useEffect(() => {
-    const checkAuthStatus = () => {
-      const savedUser = localStorage.getItem('user');
-      if (savedUser) {
-        try {
-          const user = JSON.parse(savedUser);
-          setAuthState({
-            user,
-            isLoading: false,
-            isAuthenticated: true,
-          });
-        } catch (error) {
-          localStorage.removeItem('user');
-          setAuthState({
-            user: null,
-            isLoading: false,
-            isAuthenticated: false,
-          });
-        }
-      } else {
-        setAuthState({
-          user: null,
-          isLoading: false,
-          isAuthenticated: false,
+    const checkAuthStatus = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/users/me`, {
+          credentials: 'include',
         });
+        if (response.ok) {
+          const { user } = await response.json();
+          setAuthState({ user, isLoading: false, isAuthenticated: true });
+        } else {
+          setAuthState({ user: null, isLoading: false, isAuthenticated: false });
+        }
+      } catch (err) {
+        setAuthState({ user: null, isLoading: false, isAuthenticated: false });
       }
     };
-
-    // Simulate loading delay
-    setTimeout(checkAuthStatus, 1000);
+    checkAuthStatus();
   }, []);
 
   const login = async (credentials: LoginCredentials): Promise<void> => {
     setAuthState(prev => ({ ...prev, isLoading: true }));
-    
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    // Mock authentication - in real app, this would call your backend
-    if (credentials.email && credentials.password) {
-      const mockUser: User = {
-        id: '1',
-        email: credentials.email,
-        name: credentials.email === 'manager@company.com' ? 'Sarah Johnson' : 
-              credentials.email === 'hr@company.com' ? 'HR Admin' : 'John Doe',
-        role: credentials.email === 'manager@company.com' ? 'manager' : 
-              credentials.email === 'hr@company.com' ? 'hr' : 'employee',
-        department: 'Engineering',
-        createdAt: new Date().toISOString(),
-      };
+    try {
+      const response = await fetch(`${API_URL}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(credentials),
+        credentials: 'include',
+      });
 
-      localStorage.setItem('user', JSON.stringify(mockUser));
-      setAuthState({
-        user: mockUser,
-        isLoading: false,
-        isAuthenticated: true,
-      });
-    } else {
-      setAuthState({
-        user: null,
-        isLoading: false,
-        isAuthenticated: false,
-      });
-      throw new Error('Invalid credentials');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Login failed');
+      }
+
+      const { user } = await response.json();
+      setAuthState({ user, isLoading: false, isAuthenticated: true });
+    } catch (error) {
+      setAuthState({ user: null, isLoading: false, isAuthenticated: false });
+      throw error;
     }
   };
 
-  const signup = async (data: SignUpData): Promise<void> => {
+  const signup = async (data: { email: string; password: string; name: string; department: string; role: 'employee' | 'manager' }) : Promise<void> => {
     setAuthState(prev => ({ ...prev, isLoading: true }));
-    
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Mock user creation
-    const newUser: User = {
-      id: Date.now().toString(),
-      email: data.email,
-      name: data.name,
-      role: data.role,
-      department: data.department,
-      createdAt: new Date().toISOString(),
-    };
+    try {
+      const response = await fetch(`${API_URL}/api/auth/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+        credentials: 'include',
+      });
 
-    localStorage.setItem('user', JSON.stringify(newUser));
-    setAuthState({
-      user: newUser,
-      isLoading: false,
-      isAuthenticated: true,
-    });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Signup failed');
+      }
+      
+      const { user } = await response.json();
+      setAuthState({ user, isLoading: false, isAuthenticated: true });
+      navigate('/'); // Redirect to dashboard
+      
+    } catch (error) {
+      setAuthState({ user: null, isLoading: false, isAuthenticated: false });
+      throw error;
+    }
   };
 
   const logout = () => {
-    localStorage.removeItem('user');
+    setToken(null);
     setAuthState({
       user: null,
       isLoading: false,
       isAuthenticated: false,
     });
+    navigate('/login');
   };
 
   const updateUser = (user: User) => {
-    localStorage.setItem('user', JSON.stringify(user));
     setAuthState(prev => ({
       ...prev,
       user,
@@ -136,6 +118,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const value: AuthContextType = {
     ...authState,
+    token,
     login,
     signup,
     logout,

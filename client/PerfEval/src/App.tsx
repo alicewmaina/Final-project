@@ -1,69 +1,68 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import LandingPage from './components/Landing/LandingPage';
 import { AuthProvider } from './contexts/AuthContext';
 import { AuthWrapper } from './components/auth/AuthWrapper';
-import { Header } from './components/Header';
-import { Sidebar } from './components/Sidebar';
-import { EmployeeDashboard } from './components/EmployeeDashboard';
-import { ManagerDashboard } from './components/ManagerDashboard';
+import { LoginPage } from './components/auth/LoginPage';
+import { SignUpPage } from './components/auth/SignUpPage';
+import AppContent from './AppContent';
 import { ReviewSystem } from './components/ReviewSystem';
+import { GoalTracking } from './components/GoalTracking';
 import { GroupChat } from './components/GroupChat';
 import { Analytics } from './components/Analytics';
-import { GoalTracking } from './components/GoalTracking';
-
 import { useAuth } from './contexts/AuthContext';
 
-export type ActiveView = 'dashboard' | 'reviews' | 'goals' | 'chat' | 'analytics';
+// Auth config
+const authConfig = {
+  companyName: "Performance Evaluation Tool",
+  showDemoCredentials: true,
+  primaryColor: "blue",
+  backgroundGradient: "bg-gradient-to-br from-blue-50 via-white to-purple-50",
+  customDepartments: [
+    'Engineering',
+    'Design', 
+    'Product',
+    'Marketing',
+    'Sales',
+    'Human Resources',
+    'Finance',
+    'Operations'
+  ]
+};
 
-function AppContent() {
-  const { user } = useAuth();
-  const [activeView, setActiveView] = useState<ActiveView>('dashboard');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+// Protected Route Component
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated, isLoading } = useAuth();
+  if (isLoading) return <div>Loading...</div>;
+  if (!isAuthenticated) return <Navigate to="/login" />;
+  return <>{children}</>;
+};
 
-  if (!user) return null;
-
-  const renderContent = () => {
-    if (activeView === 'reviews') return <ReviewSystem userRole={user.role} />;
-    if (activeView === 'goals') return <GoalTracking userRole={user.role} />;
-    if (activeView === 'chat') return <GroupChat userRole={user.role} />;
-    if (activeView === 'analytics') return <Analytics userRole={user.role} />;
-    
-    return user.role === 'manager' || user.role === 'hr' 
-      ? <ManagerDashboard /> 
-      : <EmployeeDashboard />;
-  };
-
+// App Component
+const App = () => {
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header 
-        onMenuClick={() => setSidebarOpen(!sidebarOpen)}
-      />
-      
-      <div className="flex">
-        <Sidebar 
-          activeView={activeView}
-          onViewChange={setActiveView}
-          isOpen={sidebarOpen}
-          onClose={() => setSidebarOpen(false)}
-        />
-        
-        <main className="flex-1 p-6 ml-0 lg:ml-64 transition-all duration-300">
-          <div className="max-w-7xl mx-auto">
-            {renderContent()}
-          </div>
-        </main>
-      </div>
-    </div>
+    <BrowserRouter>
+      <AuthProvider>
+        <AuthWrapper authConfig={authConfig}>
+          <Routes>
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/login" element={<LoginPage onSwitchToSignup={() => {}} />} />
+            <Route path="/signup" element={<SignUpPage onSwitchToLogin={() => {}} />} />
+            <Route path="/dashboard" element={
+              <ProtectedRoute>
+                <AppContent />
+              </ProtectedRoute>
+            } />
+            <Route path="/reviews" element={<ReviewSystem userRole="employee" />} />
+            <Route path="/goals" element={<GoalTracking userRole="employee" />} />
+            <Route path="/chat" element={<GroupChat userRole="employee" />} />
+            <Route path="/analytics" element={<Analytics userRole="employee" />} />
+            <Route path="*" element={<Navigate to="/" />} />
+          </Routes>
+        </AuthWrapper>
+      </AuthProvider>
+    </BrowserRouter>
   );
-}
-
-function App() {
-  return (
-    <AuthProvider>
-      <AuthWrapper>
-        <AppContent />
-      </AuthWrapper>
-    </AuthProvider>
-  );
-}
+};
 
 export default App;

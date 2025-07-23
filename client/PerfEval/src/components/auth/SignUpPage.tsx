@@ -17,6 +17,7 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({ onSwitchToLogin }) => {
     department: '',
     role: 'employee',
   });
+  // false = hidden (EyeOff), true = visible (Eye)
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState<Partial<SignUpData>>({});
@@ -68,15 +69,15 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({ onSwitchToLogin }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!validateForm()) {
       return;
     }
-
     try {
-      await signup(formData);
-    } catch (err) {
-      setErrors({ email: 'An account with this email already exists' });
+      const { email, password, name, department, role } = formData;
+      await signup({ email, password, name, department, role });
+      // AuthContext handles redirection
+    } catch (err: unknown) {
+      setErrors({ email: (err as Error)?.message || 'An account with this email already exists' });
     }
   };
 
@@ -95,6 +96,8 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({ onSwitchToLogin }) => {
   };
 
   const passwordStrength = getPasswordStrength(formData.password);
+
+  // Remove the welcome screen logic so the form always appears
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
@@ -249,9 +252,9 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({ onSwitchToLogin }) => {
                   className="absolute inset-y-0 right-0 pr-3 flex items-center"
                 >
                   {showPassword ? (
-                    <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                  ) : (
                     <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                  ) : (
+                    <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
                   )}
                 </button>
               </div>
@@ -305,9 +308,9 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({ onSwitchToLogin }) => {
                   className="absolute inset-y-0 right-0 pr-3 flex items-center"
                 >
                   {showConfirmPassword ? (
-                    <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                  ) : (
                     <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                  ) : (
+                    <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
                   )}
                 </button>
               </div>

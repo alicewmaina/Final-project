@@ -9,72 +9,64 @@ import {
   Clock,
   Flag
 } from 'lucide-react';
-import { UserRole } from '../App';
+import { useAuth } from '../contexts/AuthContext';
+import { useData } from '../hooks/useData';
+import { EmptyState } from './EmptyState';
+import { LoadingState } from './LoadingState';
 
-interface GoalTrackingProps {
-  userRole: UserRole;
-}
-
-export const GoalTracking: React.FC<GoalTrackingProps> = ({ userRole }) => {
+export const GoalTracking: React.FC<{ userRole: string }> = ({ userRole }) => {
+  const { user } = useAuth();
+  const { goals, isLoading, addGoal, updateGoal, deleteGoal } = useData();
   const [activeTab, setActiveTab] = useState<'active' | 'completed' | 'overdue'>('active');
   const [showAddGoal, setShowAddGoal] = useState(false);
+  const [newGoal, setNewGoal] = useState({
+    title: '',
+    description: '',
+    category: 'Professional Development',
+    priority: 'medium' as 'high' | 'medium' | 'low',
+    dueDate: '',
+  });
 
-  const goals = {
-    active: [
-      {
-        id: '1',
-        title: 'Complete React certification',
-        description: 'Obtain React developer certification to enhance frontend skills',
-        progress: 75,
-        dueDate: '2024-02-15',
-        priority: 'high',
-        category: 'Professional Development',
-        status: 'on-track'
-      },
-      {
-        id: '2',
-        title: 'Improve code review turnaround',
-        description: 'Reduce average code review time from 2 days to 1 day',
-        progress: 60,
-        dueDate: '2024-01-30',
-        priority: 'medium',
-        category: 'Performance',
-        status: 'on-track'
-      },
-      {
-        id: '3',
-        title: 'Mentor junior developer',
-        description: 'Provide regular mentorship to new team member',
-        progress: 30,
-        dueDate: '2024-03-01',
-        priority: 'low',
-        category: 'Leadership',
-        status: 'behind'
-      }
-    ],
-    completed: [
-      {
-        id: '4',
-        title: 'Implement new authentication system',
-        description: 'Successfully migrated to OAuth 2.0 authentication',
-        progress: 100,
-        completedDate: '2023-12-20',
-        category: 'Technical',
-        status: 'completed'
-      }
-    ],
-    overdue: [
-      {
-        id: '5',
-        title: 'Update documentation',
-        description: 'Update all API documentation for v2.0',
-        progress: 40,
-        dueDate: '2023-12-31',
-        priority: 'high',
-        category: 'Documentation',
-        status: 'overdue'
-      }
-    ]
+  if (isLoading) {
+    return <LoadingState message="Loading goals..." />;
+  }
+
+  // Filter goals for current user
+  const userGoals = goals.filter(goal => goal.userId === user?.id);
+
+  const categorizedGoals = {
+    active: userGoals.filter(goal => goal.status === 'active' || goal.status === 'on-track' || goal.status === 'behind'),
+    completed: userGoals.filter(goal => goal.status === 'completed'),
+    overdue: userGoals.filter(goal => goal.status === 'overdue')
+  };
+
+  const handleAddGoal = () => {
+    if (!newGoal.title.trim()) return;
+
+    addGoal({
+      ...newGoal,
+      progress: 0,
+      status: 'active',
+      userId: user?.id || '',
+    });
+
+    setNewGoal({
+      title: '',
+      description: '',
+      category: 'Professional Development',
+      priority: 'medium',
+      dueDate: '',
+    });
+    setShowAddGoal(false);
+  };
+
+  const handleUpdateProgress = (goalId: string, newProgress: number) => {
+    const status = newProgress === 100 ? 'completed' : 'active';
+    updateGoal(goalId, { 
+      progress: newProgress, 
+      status,
+      ...(newProgress === 100 && { completedDate: new Date().toISOString().split('T')[0] })
+    });
   };
 
   const getPriorityColor = (priority: string) => {
@@ -96,7 +88,10 @@ export const GoalTracking: React.FC<GoalTrackingProps> = ({ userRole }) => {
     }
   };
 
-  const GoalCard = ({ goal }: { goal: any }) => (
+  const GoalCard = ({ goal }: { goal: any }) => {
+    const [progress, setProgress] = useState(goal.progress);
+
+    return (
     <div className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center space-x-3">
@@ -117,6 +112,12 @@ export const GoalTracking: React.FC<GoalTrackingProps> = ({ userRole }) => {
           <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(goal.status)}`}>
             {goal.status}
           </span>
+          <button
+            onClick={() => deleteGoal(goal.id)}
+            className="text-red-600 hover:text-red-800 text-xs"
+          >
+            Delete
+          </button>
         </div>
       </div>
 
@@ -143,29 +144,39 @@ export const GoalTracking: React.FC<GoalTrackingProps> = ({ userRole }) => {
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm">
             <span className="text-gray-600">Progress:</span>
-            <span className="font-medium">{goal.progress}%</span>
+            <span className="font-medium">{progress}%</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
             <div 
               className={`h-2 rounded-full transition-all duration-300 ${
-                goal.progress === 100 ? 'bg-green-600' : 'bg-blue-600'
+                progress === 100 ? 'bg-green-600' : 'bg-blue-600'
               }`}
-              style={{ width: `${goal.progress}%` }}
+              style={{ width: `${progress}%` }}
             />
           </div>
         </div>
       </div>
 
       <div className="mt-4 flex items-center space-x-2">
-        <button className="flex-1 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-sm">
-          Update Progress
-        </button>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          value={progress}
+          onChange={(e) => {
+            const newProgress = parseInt(e.target.value);
+            setProgress(newProgress);
+            handleUpdateProgress(goal.id, newProgress);
+          }}
+          className="flex-1"
+        />
         <button className="px-3 py-2 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors text-sm">
           Edit
         </button>
       </div>
     </div>
-  );
+    );
+  };
 
   if (showAddGoal) {
     return (
@@ -181,6 +192,7 @@ export const GoalTracking: React.FC<GoalTrackingProps> = ({ userRole }) => {
             <h1 className="text-2xl font-bold text-gray-900">Add New Goal</h1>
           </div>
           <button className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+            onClick={handleAddGoal}
             Save Goal
           </button>
         </div>
@@ -193,6 +205,8 @@ export const GoalTracking: React.FC<GoalTrackingProps> = ({ userRole }) => {
               </label>
               <input
                 type="text"
+                value={newGoal.title}
+                onChange={(e) => setNewGoal(prev => ({ ...prev, title: e.target.value }))}
                 className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="Enter goal title..."
               />
@@ -203,6 +217,8 @@ export const GoalTracking: React.FC<GoalTrackingProps> = ({ userRole }) => {
                 Description
               </label>
               <textarea
+                value={newGoal.description}
+                onChange={(e) => setNewGoal(prev => ({ ...prev, description: e.target.value }))}
                 className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 rows={3}
                 placeholder="Describe your goal..."
@@ -214,7 +230,11 @@ export const GoalTracking: React.FC<GoalTrackingProps> = ({ userRole }) => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Category
                 </label>
-                <select className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <select 
+                  value={newGoal.category}
+                  onChange={(e) => setNewGoal(prev => ({ ...prev, category: e.target.value }))}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
                   <option>Professional Development</option>
                   <option>Performance</option>
                   <option>Leadership</option>
@@ -227,7 +247,11 @@ export const GoalTracking: React.FC<GoalTrackingProps> = ({ userRole }) => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Priority
                 </label>
-                <select className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <select 
+                  value={newGoal.priority}
+                  onChange={(e) => setNewGoal(prev => ({ ...prev, priority: e.target.value as 'high' | 'medium' | 'low' }))}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
                   <option>High</option>
                   <option>Medium</option>
                   <option>Low</option>
@@ -240,6 +264,8 @@ export const GoalTracking: React.FC<GoalTrackingProps> = ({ userRole }) => {
                 </label>
                 <input
                   type="date"
+                  value={newGoal.dueDate}
+                  onChange={(e) => setNewGoal(prev => ({ ...prev, dueDate: e.target.value }))}
                   className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
@@ -270,9 +296,9 @@ export const GoalTracking: React.FC<GoalTrackingProps> = ({ userRole }) => {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
         <div className="flex border-b border-gray-200">
           {[
-            { id: 'active', label: 'Active', icon: Target, count: goals.active.length },
-            { id: 'completed', label: 'Completed', icon: CheckCircle, count: goals.completed.length },
-            { id: 'overdue', label: 'Overdue', icon: AlertCircle, count: goals.overdue.length }
+            { id: 'active', label: 'Active', icon: Target, count: categorizedGoals.active.length },
+            { id: 'completed', label: 'Completed', icon: CheckCircle, count: categorizedGoals.completed.length },
+            { id: 'overdue', label: 'Overdue', icon: AlertCircle, count: categorizedGoals.overdue.length }
           ].map((tab) => {
             const Icon = tab.icon;
             return (
@@ -296,11 +322,25 @@ export const GoalTracking: React.FC<GoalTrackingProps> = ({ userRole }) => {
         </div>
 
         <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {goals[activeTab].map((goal) => (
-              <GoalCard key={goal.id} goal={goal} />
-            ))}
-          </div>
+          {categorizedGoals[activeTab].length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {categorizedGoals[activeTab].map((goal) => (
+                <GoalCard key={goal.id} goal={goal} />
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              icon={Target}
+              title={`No ${activeTab} Goals`}
+              description={
+                activeTab === 'active' ? "You don't have any active goals. Create one to get started!" :
+                activeTab === 'completed' ? "No completed goals yet. Keep working on your active goals!" :
+                "No overdue goals. Great job staying on track!"
+              }
+              actionLabel={activeTab === 'active' ? "Create Goal" : undefined}
+              onAction={activeTab === 'active' ? () => setShowAddGoal(true) : undefined}
+            />
+          )}
         </div>
       </div>
     </div>

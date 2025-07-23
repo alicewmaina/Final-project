@@ -9,7 +9,20 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   const { user, logout } = useAuth();
 
-  if (!user) return null;
+  // Defensive coding: render nothing or a loading state if user is not yet available.
+  if (!user) {
+    return (
+      <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
+        <div className="px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            {/* You can add a loading skeleton here */}
+          </div>
+        </div>
+      </header>
+    );
+  }
+
+  const userInitials = user.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase() : '?';
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
@@ -55,7 +68,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
             <div className="flex items-center space-x-3 relative group">
               <div className="h-8 w-8 bg-gray-300 rounded-full flex items-center justify-center">
                 <span className="text-sm font-medium text-gray-600">
-                  {user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                  {userInitials}
                 </span>
               </div>
               <span className="text-sm font-medium text-gray-900 hidden sm:block">

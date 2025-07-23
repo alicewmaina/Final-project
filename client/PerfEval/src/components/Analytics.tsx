@@ -16,7 +16,7 @@ interface AnalyticsProps {
 }
 
 export const Analytics: React.FC<AnalyticsProps> = ({ userRole }) => {
-  const metrics = [
+  const managerMetrics = [
     {
       title: 'Team Performance',
       value: '4.2/5.0',
@@ -50,6 +50,27 @@ export const Analytics: React.FC<AnalyticsProps> = ({ userRole }) => {
       bgColor: 'bg-amber-50'
     }
   ];
+
+  const employeeMetrics = [
+    {
+      title: 'Your Performance',
+      value: '4.2/5.0',
+      change: '+0.3 from last quarter',
+      icon: TrendingUp,
+      color: 'text-green-600',
+      bgColor: 'bg-green-50'
+    },
+    {
+      title: 'Goal Completion',
+      value: '85%',
+      change: '+12% from last quarter',
+      icon: Target,
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-50'
+    }
+  ];
+
+  const metrics = userRole === "manager" ? managerMetrics : employeeMetrics;
 
   const departmentData = [
     { name: 'Engineering', performance: 4.3, employees: 25, completion: 88 },
@@ -132,6 +153,7 @@ export const Analytics: React.FC<AnalyticsProps> = ({ userRole }) => {
       </div>
 
       {/* Department Performance */}
+      {userRole === "manager" && (
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-lg font-semibold text-gray-900">Department Performance</h3>
@@ -198,6 +220,7 @@ export const Analytics: React.FC<AnalyticsProps> = ({ userRole }) => {
           </table>
         </div>
       </div>
+      )}
     </div>
   );
 };

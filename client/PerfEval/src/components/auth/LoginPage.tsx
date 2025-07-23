@@ -11,19 +11,20 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToSignup }) => {
   const { login, isLoading } = useAuth();
   const [credentials, setCredentials] = useState<LoginCredentials>({
     email: '',
-    password: '',
   });
+  // false = hidden (EyeOff), true = visible (Eye)
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLoading) return; // Prevent double submission
     setError('');
-
     try {
       await login(credentials);
-    } catch (err) {
-      setError('Invalid email or password. Please try again.');
+      // No navigation here, AuthContext handles it
+    } catch (err: any) {
+      setError(err?.message || 'Invalid email or password. Please try again.');
     }
   };
 
@@ -44,16 +45,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToSignup }) => {
           <p className="text-gray-600">Sign in to your PerfEval Pro account</p>
         </div>
 
-        {/* Demo Credentials */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-          <h3 className="text-sm font-medium text-blue-800 mb-2">Demo Credentials:</h3>
-          <div className="text-xs text-blue-700 space-y-1">
-            <p><strong>Employee:</strong> employee@company.com / password</p>
-            <p><strong>Manager:</strong> manager@company.com / password</p>
-            <p><strong>HR Admin:</strong> hr@company.com / password</p>
-          </div>
-        </div>
-
         {/* Login Form */}
         <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -65,7 +56,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToSignup }) => {
             )}
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-edium text-gray-700 mb-2">
                 Email Address
               </label>
               <div className="relative">
@@ -104,11 +95,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToSignup }) => {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute inset-y-0 right-0 pr-3 flex items-center"
                 >
-                  {showPassword ? (
-                    <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                  ) : (
-                    <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                  )}
+                  {showPassword ? <Eye /> : <EyeOff />}
                 </button>
               </div>
             </div>
@@ -148,12 +135,20 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToSignup }) => {
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               Don't have an account?{' '}
-              <button
-                onClick={onSwitchToSignup}
+              <a
+                href="/signup"
                 className="text-blue-600 hover:text-blue-800 font-medium"
+                onClick={e => {
+                  e.preventDefault();
+                  if (typeof onSwitchToSignup === 'function') {
+                    onSwitchToSignup();
+                  } else {
+                    window.location.href = '/signup';
+                  }
+                }}
               >
                 Sign up here
-              </button>
+              </a>
             </p>
           </div>
         </div>
