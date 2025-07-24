@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Eye,
   EyeOff,
@@ -16,6 +17,7 @@ interface SignUpPageProps {
 }
 
 export const SignUpPage: React.FC<SignUpPageProps> = ({ onSwitchToLogin }) => {
+  const navigate = useNavigate();
   const { signup, isLoading } = useAuth();
 
   const [formData, setFormData] = useState<SignUpData>({
@@ -83,13 +85,13 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({ onSwitchToLogin }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
-  
+
     try {
       const { email, password, name, department, role } = formData;
       await signup({ email, password, name, department, role });
-  
-      toast.success('Account created! Please log in.');
-      onSwitchToLogin(); // ✅ Show login form
+
+      toast.success('Account created! Redirecting to login...');
+      setTimeout(() => navigate('/login'), 2000);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Signup failed. Try again.';
       toast.error(message);
@@ -250,7 +252,8 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({ onSwitchToLogin }) => {
             <p className="text-sm text-gray-600">
               Already have an account?{' '}
               <button
-                onClick={onSwitchToLogin}
+                type="button"
+                onClick={() => navigate('/login')}
                 className="text-blue-600 hover:text-blue-800 font-medium"
               >
                 Sign in here

@@ -79,7 +79,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       const { user } = await res.json();
       setAuthState({ user, isLoading: false, isAuthenticated: true });
-      navigate('/dashboard');
+      if (user.role === 'manager') {
+        navigate('/manager-dashboard');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err) {
       setAuthState({ user: null, isLoading: false, isAuthenticated: false });
       throw err;
@@ -107,9 +111,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         throw new Error(message || 'Signup failed');
       }
 
-      const { user } = await res.json();
-      setAuthState({ user, isLoading: false, isAuthenticated: true });
-      navigate('/dashboard');
+      // Do NOT set user as authenticated after signup
+      setAuthState({ user: null, isLoading: false, isAuthenticated: false });
+      // Do NOT navigate here; let the signup page handle navigation
     } catch (err) {
       setAuthState({ user: null, isLoading: false, isAuthenticated: false });
       throw err;

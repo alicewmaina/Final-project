@@ -1,14 +1,12 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, User, Lock, Mail, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { LoginCredentials } from '../../types/auth';
 import toast from 'react-hot-toast';
 
-interface LoginPageProps {
-  onSwitchToSignup: () => void;
-}
-
-export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToSignup }) => {
+export const LoginPage: React.FC = () => {
+  const navigate = useNavigate();
   const { login, isLoading } = useAuth();
 
   const [credentials, setCredentials] = useState<LoginCredentials>({
@@ -38,7 +36,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToSignup }) => {
   
       if (message.toLowerCase().includes('user not found')) {
         toast.error("Looks like you're new here. Redirecting to signup...");
-        setTimeout(() => onSwitchToSignup(), 2000);
+        setTimeout(() => navigate('/auth'), 2000);
       } else {
         toast.error(message);
       }
@@ -127,6 +125,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToSignup }) => {
               </label>
               <button
                 type="button"
+                onClick={() => navigate('/forgot-password')}
                 className="text-sm text-blue-600 hover:text-blue-800 font-medium"
               >
                 Forgot password?
@@ -156,7 +155,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToSignup }) => {
               Don't have an account?{' '}
               <button
                 type="button"
-                onClick={onSwitchToSignup}
+                onClick={() => navigate('/signup')}
                 className="text-blue-600 hover:text-blue-800 font-medium"
               >
                 Sign up here
