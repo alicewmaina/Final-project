@@ -1,13 +1,9 @@
 import React from 'react';
 import { 
-  Users, 
-  TrendingUp, 
-  Calendar, 
-  AlertTriangle,
-  UserCheck,
-  Target,
-  Award,
-  Clock
+  Users,
+  TrendingUp,
+  Calendar,
+  AlertTriangle
 } from 'lucide-react';
 import { TeamPerformanceChart } from './TeamPerformanceChart';
 import { TeamActivity } from './TeamActivity';

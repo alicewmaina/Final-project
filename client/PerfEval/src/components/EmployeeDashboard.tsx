@@ -1,28 +1,10 @@
-import React from 'react';
-import { 
-  TrendingUp, 
-  Target, 
-  Calendar, 
-  Award, 
-  Clock,
-  CheckCircle,
-  AlertCircle,
-  Users,
-  Plus,
-  Edit,
-  Trash,
-  Check
-} from 'lucide-react';
-  const handleMarkDone = (goal: Goal) => {
-    if (updateGoal) {
-      updateGoal({ ...goal, status: 'completed' });
-    }
-  };
+import React, { useRef, useCallback, useState } from 'react';
+import { TrendingUp, Target, Calendar, Award, CheckCircle, AlertCircle, Plus, Edit, Trash, Check } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../hooks/useData';
 import { EmptyState } from './EmptyState';
 import { LoadingState } from './LoadingState';
-import { Analytics } from './Analytics';
+
 
 interface Goal {
   id: string;
@@ -36,8 +18,9 @@ interface Goal {
   userId: string;
 }
 
+
 export const EmployeeDashboard: React.FC = () => {
-  const { user, isAuthenticated } = useAuth(); // Also get isAuthenticated
+  const { user, isAuthenticated } = useAuth();
   const {
     goals = [],
     reviews = [],
@@ -48,45 +31,21 @@ export const EmployeeDashboard: React.FC = () => {
     deleteGoal
   } = useData();
 
-  // More robust check: wait for auth to be confirmed and user to be loaded.
-  if (!isAuthenticated || !user) {
-    return <LoadingState message="Authenticating..." />;
-  }
-
-  const [showAddTaskModal, setShowAddTaskModal] = React.useState(false);
-  const [editTask, setEditTask] = React.useState<Goal | null>(null);
-  const [taskForm, setTaskForm] = React.useState({
+  // All hooks must be called before any return
+  const [feedback, setFeedback] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [showAddTaskModal, setShowAddTaskModal] = useState(false);
+  const [editTask, setEditTask] = useState<Goal | null>(null);
+  const [taskForm, setTaskForm] = useState({
     title: '',
     description: '',
     dueDate: '',
     priority: 'medium' as 'high' | 'medium' | 'low',
     category: 'Professional Development'
   });
+  const firstInputRef = useRef<HTMLInputElement>(null);
 
-  const handleEditTask = (goal: Goal) => {
-    setEditTask(goal);
-    setTaskForm({
-      title: goal.title,
-      description: goal.description,
-      dueDate: goal.dueDate || '',
-      priority: goal.priority,
-      category: goal.category || 'Professional Development',
-    });
-    setShowAddTaskModal(true);
-  };
-
-  const handleUpdateTask = () => {
-    if (editTask && updateGoal) {
-      updateGoal({ ...editTask, ...taskForm });
-      resetTaskForm();
-    }
-  };
-
-  const handleDeleteTask = (goal: Goal) => {
-    if (deleteGoal) deleteGoal(goal.id);
-  };
-
-  const resetTaskForm = () => {
+  const resetTaskForm = useCallback(() => {
     setShowAddTaskModal(false);
     setTaskForm({
       title: '',
@@ -96,15 +55,61 @@ export const EmployeeDashboard: React.FC = () => {
       category: 'Professional Development',
     });
     setEditTask(null);
-  };
+    setTimeout(() => firstInputRef.current?.blur(), 100);
+  }, [setShowAddTaskModal, setTaskForm, setEditTask, firstInputRef]);
 
+  const handleEditTask = useCallback((goal: Goal) => {
+    setEditTask(goal);
+    setTaskForm({
+      title: goal.title,
+      description: goal.description,
+      dueDate: goal.dueDate || '',
+      priority: goal.priority,
+      category: goal.category || 'Professional Development',
+    });
+    setShowAddTaskModal(true);
+    setTimeout(() => firstInputRef.current?.focus(), 100);
+  }, [setEditTask, setTaskForm, setShowAddTaskModal, firstInputRef]);
+
+  const handleUpdateTask = useCallback(() => {
+    if (editTask && updateGoal) {
+      setSubmitting(true);
+      updateGoal({ ...editTask, ...taskForm });
+      setFeedback('Task updated successfully.');
+      setTimeout(() => setFeedback(null), 2000);
+      resetTaskForm();
+      setSubmitting(false);
+    }
+  }, [editTask, updateGoal, taskForm, resetTaskForm, setSubmitting, setFeedback]);
+
+  const handleDeleteTask = useCallback((goal: Goal) => {
+    if (window.confirm('Are you sure you want to delete this task?')) {
+      if (deleteGoal) {
+        deleteGoal(goal.id);
+        setFeedback('Task deleted.');
+        setTimeout(() => setFeedback(null), 2000);
+      }
+    }
+  }, [deleteGoal, setFeedback]);
+
+  const handleMarkDone = useCallback((goal: Goal) => {
+    if (updateGoal) {
+      updateGoal({ ...goal, status: 'completed' });
+      setFeedback('Task marked as done!');
+      setTimeout(() => setFeedback(null), 2000);
+    }
+  }, [updateGoal, setFeedback]);
+
+  // Early returns after all hooks
+  if (!isAuthenticated || !user) {
+    return <LoadingState message="Authenticating..." />;
+  }
   if (isLoading) {
     return <LoadingState message="Loading your dashboard..." />;
   }
 
   const userGoals = goals.filter(goal => goal.userId === user?.id);
   const userReviews = reviews.filter(review => review.reviewee === user?.name);
-  const userActivities = activities.filter(activity => activity.user === user?.name);
 
   const completedGoals = userGoals.filter(goal => goal.status === 'completed').length;
   const totalGoals = userGoals.length;
@@ -165,6 +170,9 @@ export const EmployeeDashboard: React.FC = () => {
 
   return (
     <div className="space-y-8">
+      {feedback && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-green-100 text-green-800 px-4 py-2 rounded shadow" aria-live="polite">{feedback}</div>
+      )}
       {/* Overall Performance */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
         <h2 className="text-xl font-bold text-gray-900 mb-4">Overall Performance</h2>
@@ -239,21 +247,31 @@ export const EmployeeDashboard: React.FC = () => {
                     >
                       <Trash className="h-5 w-5" />
                     </button>
+                    {goal.status !== 'completed' && (
+                      <button
+                        className="text-green-600 hover:text-green-800 p-1 rounded"
+                        onClick={() => handleMarkDone(goal)}
+                        aria-label="Mark as Done"
+                      >
+                        <Check className="h-5 w-5" />
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         ) : (
-          <p className="text-gray-500">No tasks logged yet.</p>
+          <p className="text-gray-500" aria-live="polite">No tasks logged yet.</p>
         )}
 
         {showAddTaskModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30" aria-modal="true" role="dialog">
             <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-md">
               <h2 className="text-xl font-bold mb-4">{editTask ? 'Edit Task' : 'Add New Task'}</h2>
               <form onSubmit={e => {
                 e.preventDefault();
+                setSubmitting(true);
                 if (editTask) {
                   handleUpdateTask();
                 } else {
@@ -268,12 +286,15 @@ export const EmployeeDashboard: React.FC = () => {
                     userId: user?.id || '',
                   };
                   addGoal(newGoal);
+                  setFeedback('Task added successfully.');
+                  setTimeout(() => setFeedback(null), 2000);
                   resetTaskForm();
                 }
+                setSubmitting(false);
               }}>
                 <div className="mb-3">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
-                  <input type="text" value={taskForm.title} onChange={e => setTaskForm(f => ({ ...f, title: e.target.value }))} className="w-full p-2 border rounded" required />
+                  <input ref={firstInputRef} type="text" value={taskForm.title} onChange={e => setTaskForm(f => ({ ...f, title: e.target.value }))} className="w-full p-2 border rounded" required />
                 </div>
                 <div className="mb-3">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
@@ -296,9 +317,9 @@ export const EmployeeDashboard: React.FC = () => {
                   <input type="text" value={taskForm.category} onChange={e => setTaskForm(f => ({ ...f, category: e.target.value }))} className="w-full p-2 border rounded" />
                 </div>
                 <div className="flex justify-end space-x-2 mt-4">
-                  <button type="button" onClick={resetTaskForm} className="px-4 py-2 rounded bg-gray-200">Cancel</button>
-                  <button type="submit" className="px-4 py-2 rounded bg-blue-600 text-white">
-                    {editTask ? 'Update Task' : 'Add Task'}
+                  <button type="button" onClick={resetTaskForm} className="px-4 py-2 rounded bg-gray-200" aria-label="Cancel">Cancel</button>
+                  <button type="submit" className="px-4 py-2 rounded bg-blue-600 text-white" aria-label={editTask ? 'Update Task' : 'Add Task'} disabled={submitting || !taskForm.title || !taskForm.description}>
+                    {submitting ? 'Saving...' : (editTask ? 'Update Task' : 'Add Task')}
                   </button>
                 </div>
               </form>

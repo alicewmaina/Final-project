@@ -1,3 +1,4 @@
+// File removed for scaffold cleanup
 import React from 'react';
 import { 
   TrendingUp, 

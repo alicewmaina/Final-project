@@ -37,24 +37,6 @@ export const TeamActivity: React.FC = () => {
       color: 'text-purple-600',
       bgColor: 'bg-purple-50'
     },
-    {
-      type: 'review-completed',
-      title: 'Jane completed quarterly review',
-      user: 'Jane Smith',
-      time: '5 hours ago',
-      icon: Calendar,
-      color: 'text-amber-600',
-      bgColor: 'bg-amber-50'
-    },
-    {
-      type: 'improvement',
-      title: 'Tom improved performance score',
-      user: 'Tom Brown',
-      time: '1 day ago',
-      icon: TrendingUp,
-      color: 'text-indigo-600',
-      bgColor: 'bg-indigo-50'
-    }
   ];
 
   return (
@@ -76,3 +58,4 @@ export const TeamActivity: React.FC = () => {
     </div>
   );
 };
+// File removed for scaffold cleanup
