@@ -1,5 +1,6 @@
 // src/components/landing/Navbar.tsx
 import React from "react";
+import { Link } from "react-router-dom";
 
 const navLinks = [
   { label: "About", href: "#about" },
@@ -25,12 +26,12 @@ const Navbar: React.FC = () => (
             {link.label}
           </a>
         ))}
-        <a
-          href="/login"
+        <Link
+          to="/login"
           className="ml-4 px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition"
         >
           Get Started
-        </a>
+        </Link>
       </div>
     </div>
   </nav>

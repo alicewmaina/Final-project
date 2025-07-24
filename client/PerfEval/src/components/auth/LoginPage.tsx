@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Eye, EyeOff, User, Lock, Mail, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { LoginCredentials } from '../../types/auth';
+import toast from 'react-hot-toast';
 
 interface LoginPageProps {
   onSwitchToSignup: () => void;
@@ -9,28 +10,45 @@ interface LoginPageProps {
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToSignup }) => {
   const { login, isLoading } = useAuth();
+
   const [credentials, setCredentials] = useState<LoginCredentials>({
     email: '',
+    password: ''
   });
-  // false = hidden (EyeOff), true = visible (Eye)
+
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isLoading) return; // Prevent double submission
+    if (isLoading) return;
+  
     setError('');
+  
     try {
       await login(credentials);
-      // No navigation here, AuthContext handles it
-    } catch (err: any) {
-      setError(err?.message || 'Invalid email or password. Please try again.');
+      toast.success('Welcome back!');
+    } catch (err) {
+      let message = 'Login failed. Please try again.';
+      if (err instanceof Error) {
+        message = err.message;
+      }
+  
+      setError(message);
+  
+      if (message.toLowerCase().includes('user not found')) {
+        toast.error("Looks like you're new here. Redirecting to signup...");
+        setTimeout(() => onSwitchToSignup(), 2000);
+      } else {
+        toast.error(message);
+      }
     }
   };
+  
 
   const handleInputChange = (field: keyof LoginCredentials, value: string) => {
     setCredentials(prev => ({ ...prev, [field]: value }));
-    if (error) setError(''); // Clear error when user starts typing
+    if (error) setError('');
   };
 
   return (
@@ -55,10 +73,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToSignup }) => {
               </div>
             )}
 
+            {/* Email Field */}
             <div>
-              <label className="block text-sm font-edium text-gray-700 mb-2">
-                Email Address
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Mail className="h-5 w-5 text-gray-400" />
@@ -74,10 +91,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToSignup }) => {
               </div>
             </div>
 
+            {/* Password Field */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Password
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Lock className="h-5 w-5 text-gray-400" />
@@ -100,6 +116,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToSignup }) => {
               </div>
             </div>
 
+            {/* Remember Me and Forgot */}
             <div className="flex items-center justify-between">
               <label className="flex items-center">
                 <input
@@ -116,6 +133,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToSignup }) => {
               </button>
             </div>
 
+            {/* Submit Button */}
             <button
               type="submit"
               disabled={isLoading}
@@ -132,31 +150,19 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToSignup }) => {
             </button>
           </form>
 
+          {/* Switch to Signup */}
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               Don't have an account?{' '}
-              <a
-                href="/signup"
+              <button
+                type="button"
+                onClick={onSwitchToSignup}
                 className="text-blue-600 hover:text-blue-800 font-medium"
-                onClick={e => {
-                  e.preventDefault();
-                  if (typeof onSwitchToSignup === 'function') {
-                    onSwitchToSignup();
-                  } else {
-                    window.location.href = '/signup';
-                  }
-                }}
               >
                 Sign up here
-              </a>
+              </button>
             </p>
           </div>
-        </div>
-
-        <div className="text-center mt-6">
-          <p className="text-xs text-gray-500">
-            © 2024 PerfEval Pro. All rights reserved.
-          </p>
         </div>
       </div>
     </div>
